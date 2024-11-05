@@ -1,0 +1,88 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: exnodebackapi
+    #url: http://exnodebackapi_1:3000
+    host: exnodebackapi #targets below
+    port: 3000
+    routes:
+      - name: customer
+        paths:
+          - /                         
+        methods:
+          - GET
+
+#Two instances of rest api equal share of load
+upstreams:
+  - name: exnodebackapi
+    targets:
+      - target: exnodebackapi_1:3000
+        weight: 100
+      - target: exnodebackapi_2:3000
+        weight: 100
+
+plugins:
+
+  - name: rate-limiting
+    config:
+      second: 5
+      policy: local
+      fault_tolerant: true
+
+  - name: cors
+    config:
+      origins:
+      - 127.0.0.1
+      methods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+      headers:
+      - Accept
+      - Accept-Version
+      - Content-Length
+      - Content-MD5
+      - Content-Type
+      - Date
+      - X-Auth-Token
+      exposed_headers:
+      - X-Auth-Token
+      credentials: true
+      max_age: 3600
+
+  - name: prometheus
+    service: exnodebackapi
+    config:
+      per_consumer: true
+      upstream_health_metrics: true
+      latency_metrics: true
+      status_code_metrics: true
+
+  - name: jwt                                                   #RFC 7519
+    config:
+      key_claim_name: iss
+      secret_is_base64: false
+      claims_to_verify:
+      - exp                                                     # Kong checks if the current time is before the expiration time. If the token is expired, the request is rejected.
+      run_on_preflight: true
+      maximum_expiration: 0                                     # token will never expire
+      header_names:
+        - authorization                                         # header authorization field will contain token
+      realm: "exnodebackapi"                                    # to be used in name field while generating token
+  
+
+consumers: 
+  - username: "frontendapp"                                    # name field of JWT token payload
+    jwt_secrets:
+      - key: "exnodebackapikey"                                # goes to iss field of jwt token payload
+        secret: "helloworldsecret" 
+        algorithm: "HS256"
+     
+
+# openssl rand -base64 32, better store in key stores
+# Generate token for testing using JWT IO
+# Math.floor(Date.now() / 1000) browser console to get IAT
+# http://localhost:8001/consumers/fontendapp/jwt exnodebackapi is consumer name
+# its useful
