@@ -28,5 +28,6 @@ helloworldsecret
 
 -----------------------------------
 npm install  (install required packages again)
+use prima commands to generate client 
 npm run build
 npm run dev
