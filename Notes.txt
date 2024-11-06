@@ -24,3 +24,9 @@ HMACSHA256(
 helloworldsecret
 
 )
+
+
+-----------------------------------
+npm install  (install required packages again)
+npm run build
+npm run dev
